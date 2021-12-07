@@ -1,6 +1,12 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import geopandas as gpd
+import branca
+import folium
+from jinja2 import Template
+from streamlit_folium import folium_static
+from branca.element import MacroElement
 import datetime
 from datetime import date
 
@@ -8,6 +14,178 @@ import plotly.express as px
 
 #from consolidate_data import *
 data = pd.read_csv('data_sources/data.csv')
+
+
+# Clase para vincula un mapa de colores a una capa determinada
+class BindColormap(MacroElement):
+    """ Vincula un mapa de colores a una capa determinada.
+    
+    Parametros
+    ----------
+    colormap : branca.colormap.ColorMap
+        Mapa de colores a vincular.
+    """
+    def __init__(self, layer, colormap):
+        super(BindColormap, self).__init__()
+        self.layer = layer
+        self.colormap = colormap
+        self._template = Template(u"""
+        {% macro script(this, kwargs) %}
+            {{this.colormap.get_name()}}.svg[0][0].style.display = 'block';
+            {{this._parent.get_name()}}.on('overlayadd', function (eventLayer) {
+                if (eventLayer.layer == {{this.layer.get_name()}}) {
+                    {{this.colormap.get_name()}}.svg[0][0].style.display = 'block';
+                }});
+            {{this._parent.get_name()}}.on('overlayremove', function (eventLayer) {
+                if (eventLayer.layer == {{this.layer.get_name()}}) {
+                    {{this.colormap.get_name()}}.svg[0][0].style.display = 'none';
+                }});
+        {% endmacro %}
+        """)
+
+
+# Funcion para generar el mapa empleando folium 
+def folium_plot():
+    # Definiendo el path del archivo JSON con la geometria de los paises
+    country_shapes = 'map_sources\world-countries.json'
+
+    # Importando datos de casos confirmados
+    df_global_total_confirmed = data.copy()
+    df_global_total_confirmed = df_global_total_confirmed.loc[df_global_total_confirmed['Status'] == 'Confirmed']
+    df_global_total_confirmed.rename(columns={'Country/Region':'name'}, inplace=True)
+    df_global_total_confirmed = df_global_total_confirmed.drop(df_global_total_confirmed.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
+    df_global_total_confirmed = df_global_total_confirmed.groupby(by=["name"]).sum()
+
+    # Importando datos con la geometria de los paises
+    geoJSON_df = gpd.read_file(country_shapes)
+
+    country_lst_df_global_total_confirmed = list(df_global_total_confirmed.index)
+
+    final_total_cases = geoJSON_df.merge(df_global_total_confirmed,how="left",on = "name")
+    final_total_cases = final_total_cases.fillna(0)
+
+    # Importando datos de muertes
+    df_global_death = data.copy()
+    df_global_death = df_global_death.loc[df_global_death['Status'] == 'Deaths']
+    df_global_death.rename(columns={'Country/Region':'name'}, inplace=True)
+    df_global_death = df_global_death.drop(df_global_death.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
+    df_global_death = df_global_death.groupby(by=["name"]).sum()
+    df_global_death = df_global_death.fillna(0)
+
+    # Importando datos de casos recuperados
+    df_global_recovered = data.copy()
+    df_global_recovered = df_global_recovered.loc[df_global_recovered['Status'] == 'Recovered']
+    df_global_recovered.rename(columns={'Country/Region':'name'}, inplace=True)
+    df_global_recovered = df_global_recovered.drop(df_global_recovered.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
+    df_global_recovered = df_global_recovered.groupby(by=["name"]).sum()
+    df_global_recovered = df_global_recovered.fillna(0)
+
+    # Preparando datos de casos confirmados para ser concatenados    
+    df_global_folium = final_total_cases.copy()
+    df_global_folium = df_global_folium.iloc[:,[1,2,-1]]
+    df_global_folium.rename(columns={ df_global_folium.columns[-1]: "confirmados" }, inplace = True)
+
+    # Preparando datos de muertes para ser concatenados
+    df_global_death.reset_index(level=0,inplace=True)
+    df_global_death_name_last_column = df_global_death.iloc[:,[0,-1]]
+    df_global_death_name_last_column.rename(columns={ df_global_death_name_last_column.columns[-1]: "muertes" }, inplace = True)
+
+    # Preparando datos de casos recuperados para ser concatenados
+    df_global_recovered.reset_index(level=0,inplace=True)
+    df_global_recovered_name_last_column = df_global_recovered.iloc[:,[0,-1]]
+    df_global_recovered_name_last_column.rename(columns={ df_global_recovered_name_last_column.columns[-1]: "recuperados" }, inplace = True)
+
+    # Concatenando datos
+    df_global_folium = df_global_folium.merge(df_global_death_name_last_column,how="left", on = "name")
+    df_global_folium = df_global_folium.merge(df_global_recovered_name_last_column,how="left", on = "name")
+
+    # Definicion de colores para visualizacion
+    colors = ["YlOrRd","OrRd","BuPu"]
+
+    # Definicion de mapa de colores incluyendo minimo y maximo para casos confirmados
+    cmap1 = branca.colormap.StepColormap(
+        colors=['#fff600','#ffc302','#ff5b00','#ff0505'],
+        vmin=0,
+        vmax=df_global_folium['confirmados'].max(),  
+        caption='Casos Confirmados')
+
+    # Definicion de mapa de colores incluyendo minimo y maximo para muertes
+    cmap2 = branca.colormap.StepColormap(
+        colors=["#fef0d9",'#fdcc8a','#fc8d59','#d7301f'],
+        vmin=0,
+        vmax=df_global_folium['muertes'].max(),  
+        caption='Muertes')
+
+    # Definicion de mapa de colores incluyendo minimo y maximo para casos recuperados
+    cmap3 = branca.colormap.StepColormap(
+        colors=["#edf8fb",'#b3cde3','#8856a7','#810f7c'],
+        vmin=0,
+        vmax=df_global_folium['recuperados'].max(),  
+        caption='Recuperados')
+    
+    cmaps = [cmap1, cmap2, cmap3]
+    columns_list_global_map = ["confirmados", "muertes", "recuperados"]
+
+    # Creando folium map
+    folium_map_covid = folium.Map(location=[20,10], zoom_start=2)
+
+    # Ciclo para agregar parametros y colores
+    for color, cmap, i in zip(colors, cmaps, columns_list_global_map):
+        choropleth = folium.Choropleth(
+        geo_data=df_global_folium,
+        data=df_global_folium,
+        name=i,
+        columns=['name',i],
+        key_on="feature.properties.name",
+        fill_color=color,
+        colormap= cmap,
+        fill_opacity=1,
+        line_opacity=0.2,
+        show=True
+        )
+        
+        for child in choropleth._children:
+            if child.startswith("color_map"):
+                del choropleth._children[child]
+
+        style_function1 = lambda x: {'fillColor': '#ffffff', 
+                            'color':'#000000', 
+                            'fillOpacity': 0.1, 
+                            'weight': 0.1}
+        
+        highlight_function1 = lambda x: {'fillColor': '#000000', 
+                                'color':'#000000', 
+                                'fillOpacity': 0.50, 
+                                'weight': 0.1}
+        
+        NIL1 = folium.features.GeoJson(
+            data = df_global_folium,
+            style_function=style_function1, 
+            control=False,
+            highlight_function=highlight_function1, 
+            tooltip=folium.features.GeoJsonTooltip(
+                fields=['name',"confirmados", "muertes", "recuperados"],
+                aliases=['name',"confirmados", "muertes", "recuperados"],
+                style=("background-color: white; color: #333333; font-family: arial; font-size: 12px; padding: 10px;"),
+                localize=True 
+            )
+        )
+        folium_map_covid.add_child(NIL1)
+        folium_map_covid.keep_in_front(NIL1)
+
+        folium_map_covid.add_child(cmap)
+                
+        folium_map_covid.add_child(choropleth)
+        
+        bc = BindColormap(choropleth, cmap)
+        
+        folium_map_covid.add_child(bc)
+    
+    folium.TileLayer('cartodbdark_matter',name="dark mode",control=True).add_to(folium_map_covid)
+    folium.TileLayer('cartodbpositron',name="light mode",control=True).add_to(folium_map_covid)
+
+    folium_map_covid.add_child(folium.LayerControl())
+    return folium_map_covid
 
 def set_inicio():
     st.title("Introducción")
@@ -32,6 +210,8 @@ def set_inicio():
 
 def set_mapa():
     st.title("Distribución geográfica")
+    folium_plot1 = folium_plot()
+    folium_static(folium_plot1)
 
 def set_estadisticas():
     st.title("Estadísticas de incrementos")
