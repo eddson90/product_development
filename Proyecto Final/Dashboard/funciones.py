@@ -94,9 +94,9 @@ def set_otras_estadisticas():
     period_deaths= data_summary[data_summary['Status'] == 'Deaths' ][data_summary['Country/Region'] == selector_pais]
     period_recovered = data_summary[data_summary['Status'] == 'Recovered' ][data_summary['Country/Region'] == selector_pais]
 
-    bar_confirmed  = px.bar(period_confirmed, x='Year-month',y='Cases', color_discrete_sequence=["red"])
-    bar_deaths  = px.bar(period_deaths, x='Year-month',y='Cases', color_discrete_sequence=["white"])
-    bar_recovered  = px.bar(period_recovered, x='Year-month',y='Cases', color_discrete_sequence=["green"])
+    bar_confirmed  = px.bar(period_confirmed, x='Year-month',y='Cases', color_discrete_sequence=["red"], labels={'Year-month':'Año-mes','Cases':'Casos'})
+    bar_deaths  = px.bar(period_deaths, x='Year-month',y='Cases', color_discrete_sequence=["white"], labels={'Year-month':'Año-mes','Cases':'Casos'})
+    bar_recovered  = px.bar(period_recovered, x='Year-month',y='Cases', color_discrete_sequence=["green"],labels={'Year-month':'Año-mes','Cases':'Casos'} )
     
     col1, col2, col3 = st.columns(3)
 
