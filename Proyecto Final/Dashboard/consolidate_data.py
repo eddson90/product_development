@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def data_to_df(path):
     df = pd.read_csv(path, sep = ',')
@@ -20,7 +21,41 @@ def consolidate_data(c_path, d_path, r_path):
     data = data.append(df3)
     data['Date'] = pd.to_datetime(data['Date']).dt.date
     data['Year-month'] = pd.to_datetime(data['Date']).dt.to_period('M')
-    return data
+
+    # lista de paises y status
+    paises = np.unique(data['Country/Region'])
+    estados = np.unique(data['Status'])
+    data_real = pd.DataFrame()
+
+    # ciclo
+    for pais in paises:
+        for estado in estados:
+            # filtrar el dataframe original por pais y estado, remover los índices
+            df = data[data['Country/Region'] == pais]
+            df = df[df['Status'] == estado]
+            df = df.sort_values(by=['Status','Province/State','Date'])
+            df.reset_index(inplace=True)
+
+            #calcular un dataframe con lag
+            Previous_Cases = df[['Date','Status','Cases']]
+            Previous_Cases = Previous_Cases.shift(periods=1)
+            Previous_Cases.reset_index(inplace=True)
+
+            #unir ambos dataframe por índice y calcular el valor real de cada día
+            df = df.merge(Previous_Cases, left_index=True, right_index=True)
+            df['Cases'] =  df['Cases_x'] - df['Cases_y']
+
+            # convertir valores negativos a cero para los días sin datos
+            for i in range(len(df)):
+                df['Cases'][i] = 0 if df.iloc[i]['Cases'] <0 else df['Cases'][i]
+            
+            data_real = data_real.append(df)
+
+    #renombrar columnas
+    data_real = data_real[['Province/State','Country/Region','Lat','Long','Date_x','Status_x','Year-month','Cases']]
+    data_real = data_real.rename(columns={'Date_x':'Date','Status_x':'Status'})
+
+    return data_real
 
 # Define paths for reading data
 confirmed_path = 'data_sources/time_series_covid19_confirmed_global.csv'
