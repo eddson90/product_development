@@ -83,7 +83,7 @@ def set_estadisticas():
 
 def set_otras_estadisticas():
     st.title("Otras estadísticas")
-
+    st.subheader("Casos agrupados por año y mes")
     selector_pais = st.selectbox(
         label = 'Selecciona un país:',
         options = np.unique(data['Country/Region'])
