@@ -4,9 +4,10 @@ import pandas as pd
 from funciones import *
 
 
-st.set_page_config(page_title='Covid-19',
+st.set_page_config(page_title='Covid-19 Dashboard',
                    page_icon='😷',
-                   layout="wide")
+                   layout="wide",
+                   menu_items={'About': "Este tablero fue desarrollado como un proyecto end-to-end para el curso de Product Development de Universidad Galielo (2021)."})
 
 
 #Sidebar
