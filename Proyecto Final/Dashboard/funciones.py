@@ -81,7 +81,34 @@ def set_estadisticas():
 def set_otras_estadisticas():
     st.title("Otras estadísticas")
 
+    selector_pais = st.selectbox(
+        label = 'Selecciona un país:',
+        options = np.unique(data['Country/Region'])
+    )
+
     data_summary = data[['Year-month', 'Country/Region', 'Status','Cases']]
     data_summary = data_summary.groupby(['Year-month','Country/Region','Status'], as_index=False).sum()
     data_summary['Year-month'] = data_summary['Year-month'].astype(str)
-    st.write(data_summary[data_summary['Country/Region']=='Guatemala'])
+
+    period_confirmed = data_summary[data_summary['Status'] == 'Confirmed' ][data_summary['Country/Region'] == selector_pais]
+    period_deaths= data_summary[data_summary['Status'] == 'Deaths' ][data_summary['Country/Region'] == selector_pais]
+    period_recovered = data_summary[data_summary['Status'] == 'Recovered' ][data_summary['Country/Region'] == selector_pais]
+
+    bar_confirmed  = px.bar(period_confirmed, x='Year-month',y='Cases', color_discrete_sequence=["red"])
+    bar_deaths  = px.bar(period_deaths, x='Year-month',y='Cases', color_discrete_sequence=["white"])
+    bar_recovered  = px.bar(period_recovered, x='Year-month',y='Cases', color_discrete_sequence=["green"])
+    
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.write("Confirmados por mes")
+        st.plotly_chart(bar_confirmed, use_container_width = True)
+
+    with col2:
+        st.write("Muertes por mes")
+        st.plotly_chart(bar_deaths,use_container_width = True)
+
+    with col3:
+        st.write("Recuperados por mes")
+        st.plotly_chart(bar_recovered, use_container_width = True)
+
