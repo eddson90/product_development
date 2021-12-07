@@ -1,0 +1,5 @@
+fastapi
+typing
+uvicorn
+mysql
+mysql-connector-python
