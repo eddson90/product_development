@@ -63,3 +63,5 @@ deaths_path = 'data_sources/time_series_covid19_deaths_global.csv'
 recovered_path = 'data_sources/time_series_covid19_recovered_global.csv'
 
 data = consolidate_data(confirmed_path, deaths_path, recovered_path)
+
+data.to_csv('data_sources/data.csv')
