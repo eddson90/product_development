@@ -3,8 +3,11 @@ import numpy as np
 import pandas as pd
 import datetime
 from datetime import date
-from consolidate_data import *
+
 import plotly.express as px
+
+#from consolidate_data import *
+data = pd.read_csv('data_sources/data.csv')
 
 def set_inicio():
     st.title("Introducción")
