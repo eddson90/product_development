@@ -9,8 +9,8 @@ from streamlit_folium import folium_static
 from branca.element import MacroElement
 import datetime
 from datetime import date
-
 import plotly.express as px
+import plotly.graph_objects as go
 
 #from consolidate_data import *
 data = pd.read_csv('data_sources/data.csv')
@@ -263,12 +263,12 @@ def set_estadisticas():
 
 def set_otras_estadisticas():
     st.title("Otras estadísticas")
-    st.subheader("Casos agrupados por año y mes")
+    
     selector_pais = st.selectbox(
         label = 'Selecciona un país:',
         options = np.unique(data['Country/Region'])
     )
-
+    st.subheader(f"Casos agrupados por año y mes en {selector_pais}")
     data_summary = data[['Year-month', 'Country/Region', 'Status','Cases']]
     data_summary = data_summary.groupby(['Year-month','Country/Region','Status'], as_index=False).sum()
     data_summary['Year-month'] = data_summary['Year-month'].astype(str)
@@ -277,21 +277,48 @@ def set_otras_estadisticas():
     period_deaths= data_summary[data_summary['Status'] == 'Deaths' ][data_summary['Country/Region'] == selector_pais]
     period_recovered = data_summary[data_summary['Status'] == 'Recovered' ][data_summary['Country/Region'] == selector_pais]
 
-    bar_confirmed  = px.bar(period_confirmed, x='Year-month',y='Cases', color_discrete_sequence=["red"], labels={'Year-month':'Año-mes','Cases':'Casos'})
-    bar_deaths  = px.bar(period_deaths, x='Year-month',y='Cases', color_discrete_sequence=["white"], labels={'Year-month':'Año-mes','Cases':'Casos'})
-    bar_recovered  = px.bar(period_recovered, x='Year-month',y='Cases', color_discrete_sequence=["green"],labels={'Year-month':'Año-mes','Cases':'Casos'} )
+    bar_confirmed  = px.bar(period_confirmed, x='Year-month',y='Cases', color_discrete_sequence=["red"], labels={'Year-month':'Año-mes','Cases':'Casos'}, title='Confirmados por mes')
+    bar_deaths  = px.bar(period_deaths, x='Year-month',y='Cases', color_discrete_sequence=["white"], labels={'Year-month':'Año-mes','Cases':'Casos'}, title='Muertes por mes')
+    bar_recovered  = px.bar(period_recovered, x='Year-month',y='Cases', color_discrete_sequence=["green"],labels={'Year-month':'Año-mes','Cases':'Casos'}, title='Recuperados por mes' )
+
+
+    # tasa de mortalidad
+    data2 = pd.pivot_table(data,index=['Country/Region','Lat','Long','Date','Year-month'],columns='Status', values='Cases', aggfunc=np.sum, observed=True)
+    data2.reset_index(inplace=True)
+    data2['Confirmed'] = data2['Confirmed'].fillna(0)
+    data2['Deaths'] = data2['Deaths'].fillna(0)
+    data2['Recovered'] = data2['Recovered'].fillna(0)
+    data2 = data2.groupby(by=['Country/Region','Year-month']).sum()
+    data2['Mortality Rate'] = data2['Deaths']/data2['Confirmed']
+    data2.reset_index(inplace=True)
+    data2 = data2[['Country/Region','Year-month','Mortality Rate','Confirmed','Deaths','Recovered']]
+    data2 = data2.dropna(subset=['Mortality Rate'])
+    #data2['Mortality Rate'] = data2['Mortality Rate'].astype(float).map(lambda n: '{:.2%}'.format(n))
+    data2 = data2[data2['Country/Region']==selector_pais]
     
+    total_confirmed = data2['Confirmed'].sum()
+    total_deaths = data2['Deaths'].sum()
+    total_recovered = data2['Recovered'].sum()
+
+    fig = px.line(data2, x='Year-month',y='Mortality Rate', labels={'Year-month':'Año-mes','Mortality Rate':'Tasa de mortalidad'}, text='Mortality Rate', markers = True)
+    
+
+    #layout
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.write("Confirmados por mes")
+        st.metric('Total confirmados',value='{:,.0f}'.format(total_confirmed))
         st.plotly_chart(bar_confirmed, use_container_width = True)
 
     with col2:
-        st.write("Muertes por mes")
+        st.metric('Total muertes',value='{:,.0f}'.format(total_deaths))
         st.plotly_chart(bar_deaths,use_container_width = True)
 
     with col3:
-        st.write("Recuperados por mes")
+        st.metric('Total recuperados',value='{:,.0f}'.format(total_recovered))
         st.plotly_chart(bar_recovered, use_container_width = True)
+
+    st.subheader(f'Tasa de mortalidad % (Muertes/Casos confirmados)')
+    st.plotly_chart(fig, use_container_width = True)
+    
 
