@@ -387,5 +387,20 @@ def set_otras_estadisticas():
 
     st.subheader(f'Tasa de mortalidad % (Muertes/Casos confirmados)')
     st.plotly_chart(fig, use_container_width = True)
+
+
+def set_acerca_de():
+    st.header("Proyecto final")
+    st.markdown(
+        body="""
+        El presente dashboard, front-end y back-end fueron desarrollados como parte del proyecto final end-to-end del curso de Product Development de Universidad Galileo (2021) en la Maestría de Ciencia de Datos. El código está desplegado mediante un contenedor de Docker,  la ingesta de datos se realizó en Airflow, la interfaz de comunicación se realizó a través de FastAPI y el tablero con streamlit. 
+        
+        El código está disponible en: https://github.com/eddson90/product_development/tree/master/Proyecto%20Final
+        
+        Todos los derechos reservados.
+        
+        """
+
+    )
     
 
