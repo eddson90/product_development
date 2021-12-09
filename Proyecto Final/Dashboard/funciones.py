@@ -364,8 +364,13 @@ def set_otras_estadisticas():
     total_deaths = data2['Deaths'].sum()
     total_recovered = data2['Recovered'].sum()
 
-    fig = px.line(data2, x='Year-month',y='Mortality Rate', labels={'Year-month':'Año-mes','Mortality Rate':'Tasa de mortalidad'}, text='Mortality Rate', markers = True)
-    
+    fig = px.line(data2.round(2), x='Year-month',y='Mortality Rate', labels={'Year-month':'Año-mes','Mortality Rate':'Tasa de mortalidad'}, text='Mortality Rate', markers = True)
+    fig.update_traces(
+        hovertemplate="<br>".join([
+            "Año-mes: %{x}",
+            "Tasa de mortalidad: %{y} %",
+            ])
+    )
 
     #layout
     col1, col2, col3 = st.columns(3)
