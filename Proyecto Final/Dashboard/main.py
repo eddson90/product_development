@@ -15,7 +15,7 @@ st.sidebar.header('COVID-19')
 
 menu = st.sidebar.radio(
     "",
-    ("Inicio", "Distribución geográfica", "Estadísticas de incrementos", "Otras estadísticas"),
+    ("Inicio", "Distribución geográfica", "Estadísticas de incrementos", "Otras estadísticas","Acerca de este proyecto"),
 )
 
 st.sidebar.markdown('---')
@@ -43,3 +43,5 @@ elif menu == 'Estadísticas de incrementos':
     set_estadisticas()
 elif menu == "Otras estadísticas":
     set_otras_estadisticas()
+elif menu == "Acerca de este proyecto":
+    set_acerca_de()
