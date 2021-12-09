@@ -15,7 +15,6 @@ import plotly.graph_objects as go
 #from consolidate_data import *
 data = pd.read_csv('data_sources/data.csv')
 
-
 # Clase para vincula un mapa de colores a una capa determinada
 class BindColormap(MacroElement):
     """ Vincula un mapa de colores a una capa determinada.
@@ -45,12 +44,14 @@ class BindColormap(MacroElement):
 
 
 # Funcion para generar el mapa empleando folium 
-def folium_plot():
+def folium_plot(start_date, end_date, status):
     # Definiendo el path del archivo JSON con la geometria de los paises
     country_shapes = 'map_sources\world-countries.json'
+    data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+    data_filtered = data[(data['Date']>=start_date) & (data['Date']<=end_date)]
 
     # Importando datos de casos confirmados
-    df_global_total_confirmed = data.copy()
+    df_global_total_confirmed = data_filtered.copy()
     df_global_total_confirmed = df_global_total_confirmed.loc[df_global_total_confirmed['Status'] == 'Confirmed']
     df_global_total_confirmed.rename(columns={'Country/Region':'name'}, inplace=True)
     df_global_total_confirmed = df_global_total_confirmed.drop(df_global_total_confirmed.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
@@ -59,13 +60,23 @@ def folium_plot():
     # Importando datos con la geometria de los paises
     geoJSON_df = gpd.read_file(country_shapes)
 
+    geoJSON_df["name"].replace({'United States of America':'US'}, inplace = True)
+    geoJSON_df["name"].replace({'South Korea':'Korea, South'}, inplace = True)
+    geoJSON_df["name"].replace({'The Bahamas':'Bahamas'}, inplace = True)
+    geoJSON_df["name"].replace({'Ivory Coast':'Cote d\'Ivoire'}, inplace = True)
+    geoJSON_df["name"].replace({'Republic of the Congo':'Congo (Brazzaville)'}, inplace = True)
+    geoJSON_df["name"].replace({'Democratic Republic of the Congo':'Congo (Kinshasa)'}, inplace = True)
+    geoJSON_df["name"].replace({'United Republic of Tanzania':'Tanzania'}, inplace = True)
+    geoJSON_df["name"].replace({'Czech Republic':'Czechia'}, inplace = True)
+    geoJSON_df["name"].replace({'Republic of Serbia':'Serbia'}, inplace = True)
+
     country_lst_df_global_total_confirmed = list(df_global_total_confirmed.index)
 
     final_total_cases = geoJSON_df.merge(df_global_total_confirmed,how="left",on = "name")
     final_total_cases = final_total_cases.fillna(0)
 
     # Importando datos de muertes
-    df_global_death = data.copy()
+    df_global_death = data_filtered.copy()
     df_global_death = df_global_death.loc[df_global_death['Status'] == 'Deaths']
     df_global_death.rename(columns={'Country/Region':'name'}, inplace=True)
     df_global_death = df_global_death.drop(df_global_death.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
@@ -73,7 +84,7 @@ def folium_plot():
     df_global_death = df_global_death.fillna(0)
 
     # Importando datos de casos recuperados
-    df_global_recovered = data.copy()
+    df_global_recovered = data_filtered.copy()
     df_global_recovered = df_global_recovered.loc[df_global_recovered['Status'] == 'Recovered']
     df_global_recovered.rename(columns={'Country/Region':'name'}, inplace=True)
     df_global_recovered = df_global_recovered.drop(df_global_recovered.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
@@ -100,7 +111,7 @@ def folium_plot():
     df_global_folium = df_global_folium.merge(df_global_recovered_name_last_column,how="left", on = "name")
 
     # Definicion de colores para visualizacion
-    colors = ["YlOrRd","OrRd","BuPu"]
+    #colors = ["YlOrRd","OrRd","BuPu"]
 
     # Definicion de mapa de colores incluyendo minimo y maximo para casos confirmados
     cmap1 = branca.colormap.StepColormap(
@@ -123,11 +134,28 @@ def folium_plot():
         vmax=df_global_folium['recuperados'].max(),  
         caption='Recuperados')
     
-    cmaps = [cmap1, cmap2, cmap3]
-    columns_list_global_map = ["confirmados", "muertes", "recuperados"]
+    if status == 'Confirmed':
+        cmaps = [cmap1]
+        columns_list_global_map = ["confirmados"]
+        colors = ["YlOrRd"]
+    elif status == 'Deaths':
+        cmaps = [cmap2]
+        columns_list_global_map = ["muertes"]
+        colors = ["OrRd"]
+    elif status == 'Recovered':
+        cmaps = [cmap3]
+        columns_list_global_map = ["recuperados"]
+        colors = ["BuPu"]
+    else:
+        cmaps = [cmap1, cmap2, cmap3]
+        columns_list_global_map = ["confirmados", "muertes", "recuperados"]
+        colors = ["YlOrRd","OrRd","BuPu"]
+
+    #cmaps = [cmap1, cmap2, cmap3]
+    #columns_list_global_map = ["confirmados", "muertes", "recuperados"]
 
     # Creando folium map
-    folium_map_covid = folium.Map(location=[20,10], zoom_start=2)
+    folium_map_covid = folium.Map(location=[35,0], zoom_start=1)
 
     # Ciclo para agregar parametros y colores
     for color, cmap, i in zip(colors, cmaps, columns_list_global_map):
@@ -209,8 +237,48 @@ def set_inicio():
     st.write("Fuente: [Organización Mundial de la Salud](https://www.who.int/es/health-topics/coronavirus#tab=tab_1)")
 
 def set_mapa():
+
     st.title("Distribución geográfica")
-    folium_plot1 = folium_plot()
+
+    selector_date = st.selectbox(
+        label = 'Seleccione el tipo de ingreso de la fecha:',
+        options = ['Calendario', 'Slider']
+    )
+
+    if 'date_bounds' not in st.session_state:
+        date_min = datetime.datetime.strptime(str(min(data['Date'])), '%Y-%m-%d').strftime('%d-%m-%Y')
+        date_max = datetime.datetime.strptime(str(max(data['Date'])), '%Y-%m-%d').strftime('%d-%m-%Y')
+        st.session_state.date_bounds = (date_min, date_max)
+    
+    if selector_date == 'Slider':
+        date_container_1 = st.empty()
+        start_date, end_date = date_container_1.slider('Rango de fechas a visualizar: ', value=st.session_state.date_bounds, format='DD-MM-YYYY')
+    elif selector_date == 'Calendario':
+        date_container_1 = st.empty()
+        dates = st.date_input('Rango de fechas a visualizar: ', value=st.session_state.date_bounds, min_value=st.session_state.date_bounds[0], max_value=st.session_state.date_bounds[1])
+        if len(dates) == 2:
+            start_date = dates[0].strftime('%d-%m-%Y')
+            end_date = dates[1].strftime('%d-%m-%Y')
+        else:
+            start_date = dates[0].strftime('%d-%m-%Y')
+            end_date = st.session_state.date_bounds[1].strftime('%d-%m-%Y')
+
+    select_status = st.radio(
+        label='Seleccionar un estado:',
+        options= ['Confirmados','Muertes','Recuperados', 'Todos los datos'],
+        index=0
+    )
+
+    if select_status == 'Confirmados':
+        status = 'Confirmed'
+    elif select_status == 'Muertes':
+        status = 'Deaths'
+    elif select_status == 'Recuperados':
+        status = 'Recovered'
+    else:
+        status = None
+
+    folium_plot1 = folium_plot(start_date, end_date, status)
     folium_static(folium_plot1)
 
 def set_estadisticas():
