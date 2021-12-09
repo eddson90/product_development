@@ -47,8 +47,9 @@ class BindColormap(MacroElement):
 def folium_plot(start_date, end_date, status):
     # Definiendo el path del archivo JSON con la geometria de los paises
     country_shapes = 'map_sources\world-countries.json'
-    data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
-    data_filtered = data[(data['Date']>=start_date) & (data['Date']<=end_date)]
+    data_filtered = data.copy()
+    data_filtered['Date'] = pd.to_datetime(data_filtered['Date'], errors='coerce')
+    data_filtered = data_filtered[(data_filtered['Date']>=start_date) & (data_filtered['Date']<=end_date)]
 
     # Importando datos de casos confirmados
     df_global_total_confirmed = data_filtered.copy()
@@ -60,6 +61,7 @@ def folium_plot(start_date, end_date, status):
     # Importando datos con la geometria de los paises
     geoJSON_df = gpd.read_file(country_shapes)
 
+    # Renombrando datos del archivo de geometria
     geoJSON_df["name"].replace({'United States of America':'US'}, inplace = True)
     geoJSON_df["name"].replace({'South Korea':'Korea, South'}, inplace = True)
     geoJSON_df["name"].replace({'The Bahamas':'Bahamas'}, inplace = True)
@@ -69,8 +71,6 @@ def folium_plot(start_date, end_date, status):
     geoJSON_df["name"].replace({'United Republic of Tanzania':'Tanzania'}, inplace = True)
     geoJSON_df["name"].replace({'Czech Republic':'Czechia'}, inplace = True)
     geoJSON_df["name"].replace({'Republic of Serbia':'Serbia'}, inplace = True)
-
-    country_lst_df_global_total_confirmed = list(df_global_total_confirmed.index)
 
     final_total_cases = geoJSON_df.merge(df_global_total_confirmed,how="left",on = "name")
     final_total_cases = final_total_cases.fillna(0)
@@ -110,8 +110,6 @@ def folium_plot(start_date, end_date, status):
     df_global_folium = df_global_folium.merge(df_global_death_name_last_column,how="left", on = "name")
     df_global_folium = df_global_folium.merge(df_global_recovered_name_last_column,how="left", on = "name")
 
-    # Definicion de colores para visualizacion
-    #colors = ["YlOrRd","OrRd","BuPu"]
 
     # Definicion de mapa de colores incluyendo minimo y maximo para casos confirmados
     cmap1 = branca.colormap.StepColormap(
@@ -134,6 +132,7 @@ def folium_plot(start_date, end_date, status):
         vmax=df_global_folium['recuperados'].max(),  
         caption='Recuperados')
     
+    # Definicion de colores para visualizacion dependiendo del filtro aplicado
     if status == 'Confirmed':
         cmaps = [cmap1]
         columns_list_global_map = ["confirmados"]
@@ -150,9 +149,6 @@ def folium_plot(start_date, end_date, status):
         cmaps = [cmap1, cmap2, cmap3]
         columns_list_global_map = ["confirmados", "muertes", "recuperados"]
         colors = ["YlOrRd","OrRd","BuPu"]
-
-    #cmaps = [cmap1, cmap2, cmap3]
-    #columns_list_global_map = ["confirmados", "muertes", "recuperados"]
 
     # Creando folium map
     folium_map_covid = folium.Map(location=[35,0], zoom_start=1)
@@ -246,8 +242,8 @@ def set_mapa():
     )
 
     if 'date_bounds' not in st.session_state:
-        date_min = datetime.datetime.strptime(str(min(data['Date'])), '%Y-%m-%d').strftime('%d-%m-%Y')
-        date_max = datetime.datetime.strptime(str(max(data['Date'])), '%Y-%m-%d').strftime('%d-%m-%Y')
+        date_min = datetime.datetime.strptime(str(min(data['Date'])), '%Y-%m-%d')
+        date_max = datetime.datetime.strptime(str(max(data['Date'])), '%Y-%m-%d')
         st.session_state.date_bounds = (date_min, date_max)
     
     if selector_date == 'Slider':
@@ -255,13 +251,13 @@ def set_mapa():
         start_date, end_date = date_container_1.slider('Rango de fechas a visualizar: ', value=st.session_state.date_bounds, format='DD-MM-YYYY')
     elif selector_date == 'Calendario':
         date_container_1 = st.empty()
-        dates = st.date_input('Rango de fechas a visualizar: ', value=st.session_state.date_bounds, min_value=st.session_state.date_bounds[0], max_value=st.session_state.date_bounds[1])
+        dates = date_container_1.date_input('Rango de fechas a visualizar: ', value=st.session_state.date_bounds, min_value=st.session_state.date_bounds[0], max_value=st.session_state.date_bounds[1])
         if len(dates) == 2:
-            start_date = dates[0].strftime('%d-%m-%Y')
-            end_date = dates[1].strftime('%d-%m-%Y')
+            start_date = dates[0].strftime('%Y-%m-%d')
+            end_date = dates[1].strftime('%Y-%m-%d')
         else:
-            start_date = dates[0].strftime('%d-%m-%Y')
-            end_date = st.session_state.date_bounds[1].strftime('%d-%m-%Y')
+            start_date = dates[0].strftime('%Y-%m-%d')
+            end_date = st.session_state.date_bounds[1].strftime('%Y-%m-%d')
 
     select_status = st.radio(
         label='Seleccionar un estado:',
