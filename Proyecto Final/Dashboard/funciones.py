@@ -292,7 +292,7 @@ def set_estadisticas():
         df_country = df.groupby(['Country/Region'], as_index=False).sum()
 
         fig = px.line(df_daily, x="Date", y="Cases", color='Country/Region',
-            title=titulo)
+            title=titulo, labels={'Date':'Fecha','Cases':'Casos','Country/Region':'País/Región'})
         fig.update_traces(patch={"line": {"width": 2}})
         
         barras = px.bar(df_country, x='Country/Region',y='Cases', color='Cases')
