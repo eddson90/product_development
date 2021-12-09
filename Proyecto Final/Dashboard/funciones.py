@@ -353,13 +353,11 @@ def set_otras_estadisticas():
     data2['Deaths'] = data2['Deaths'].fillna(0)
     data2['Recovered'] = data2['Recovered'].fillna(0)
     data2 = data2.groupby(by=['Country/Region','Year-month']).sum()
-    data2['Mortality Rate'] = data2['Deaths']/data2['Confirmed']
+    data2['Mortality Rate'] = data2['Deaths']/data2['Confirmed']*100
     data2.reset_index(inplace=True)
     data2 = data2[['Country/Region','Year-month','Mortality Rate','Confirmed','Deaths','Recovered']]
     data2 = data2.dropna(subset=['Mortality Rate'])
-    #data2['Mortality Rate'] = data2['Mortality Rate'].astype(float).map(lambda n: '{:.2%}'.format(n))
     data2 = data2[data2['Country/Region']==selector_pais]
-    
     total_confirmed = data2['Confirmed'].sum()
     total_deaths = data2['Deaths'].sum()
     total_recovered = data2['Recovered'].sum()
