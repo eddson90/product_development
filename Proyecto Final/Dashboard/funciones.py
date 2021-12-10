@@ -4,6 +4,7 @@ import pandas as pd
 import geopandas as gpd
 import branca
 import folium
+import requests
 from jinja2 import Template
 from streamlit_folium import folium_static
 from branca.element import MacroElement
@@ -13,7 +14,29 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 #from consolidate_data import *
-data = pd.read_csv('data_sources/data.csv')
+#data = pd.read_csv('data_sources/data.csv')
+
+base_url = 'http://localhost:80/'
+
+def get_data(url, endpoint):
+    r = requests.get(url+endpoint)
+    json = r.json()
+    df = pd.DataFrame(json['data'])
+    return df
+
+data_confirmed = get_data(base_url, 'confirmed')
+data_death = get_data(base_url, 'death')
+data_recovered = get_data(base_url, 'recovered')
+
+frames = [data_confirmed, data_death, data_recovered]
+
+data = pd.concat(frames)
+
+data = data.drop(['Cases'], axis=1)
+data = data.rename(columns={"Province": "Province/State", "Country": "Country/Region", "NewCases": "Cases", "Type": "Status"})
+data['Date'] = pd.to_datetime(data['Date']).dt.date
+data['Year-month'] = pd.to_datetime(data['Date']).dt.to_period('M')
+
 
 # Clase para vincula un mapa de colores a una capa determinada
 class BindColormap(MacroElement):
@@ -55,7 +78,8 @@ def folium_plot(start_date, end_date, status):
     df_global_total_confirmed = data_filtered.copy()
     df_global_total_confirmed = df_global_total_confirmed.loc[df_global_total_confirmed['Status'] == 'Confirmed']
     df_global_total_confirmed.rename(columns={'Country/Region':'name'}, inplace=True)
-    df_global_total_confirmed = df_global_total_confirmed.drop(df_global_total_confirmed.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
+    df_global_total_confirmed = df_global_total_confirmed.drop(['Province/State', 'Lat', 'Long', 'Date', 'Status', 'Year-month'], axis=1)
+    #df_global_total_confirmed = df_global_total_confirmed.drop(df_global_total_confirmed.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
     df_global_total_confirmed = df_global_total_confirmed.groupby(by=["name"]).sum()
 
     # Importando datos con la geometria de los paises
@@ -77,9 +101,9 @@ def folium_plot(start_date, end_date, status):
 
     # Importando datos de muertes
     df_global_death = data_filtered.copy()
-    df_global_death = df_global_death.loc[df_global_death['Status'] == 'Deaths']
+    df_global_death = df_global_death.loc[df_global_death['Status'] == 'Death']
     df_global_death.rename(columns={'Country/Region':'name'}, inplace=True)
-    df_global_death = df_global_death.drop(df_global_death.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
+    df_global_death = df_global_death.drop(['Province/State', 'Lat', 'Long', 'Date', 'Status', 'Year-month'], axis=1)
     df_global_death = df_global_death.groupby(by=["name"]).sum()
     df_global_death = df_global_death.fillna(0)
 
@@ -87,7 +111,7 @@ def folium_plot(start_date, end_date, status):
     df_global_recovered = data_filtered.copy()
     df_global_recovered = df_global_recovered.loc[df_global_recovered['Status'] == 'Recovered']
     df_global_recovered.rename(columns={'Country/Region':'name'}, inplace=True)
-    df_global_recovered = df_global_recovered.drop(df_global_recovered.columns[[0, 1, 3, 4, 5, 6, 7]], axis=1)
+    df_global_recovered = df_global_recovered.drop(['Province/State', 'Lat', 'Long', 'Date', 'Status', 'Year-month'], axis=1)
     df_global_recovered = df_global_recovered.groupby(by=["name"]).sum()
     df_global_recovered = df_global_recovered.fillna(0)
 
@@ -137,7 +161,7 @@ def folium_plot(start_date, end_date, status):
         cmaps = [cmap1]
         columns_list_global_map = ["confirmados"]
         colors = ["YlOrRd"]
-    elif status == 'Deaths':
+    elif status == 'Death':
         cmaps = [cmap2]
         columns_list_global_map = ["muertes"]
         colors = ["OrRd"]
@@ -268,7 +292,7 @@ def set_mapa():
     if select_status == 'Confirmados':
         status = 'Confirmed'
     elif select_status == 'Muertes':
-        status = 'Deaths'
+        status = 'Death'
     elif select_status == 'Recuperados':
         status = 'Recovered'
     else:
@@ -306,7 +330,7 @@ def set_estadisticas():
     if select_status == 'Confirmados':
         estado = 'Confirmed'
     elif select_status == 'Muertes':
-        estado = 'Deaths'
+        estado = 'Death'
     else:
         estado = 'Recovered'
     
@@ -338,7 +362,7 @@ def set_otras_estadisticas():
     data_summary['Year-month'] = data_summary['Year-month'].astype(str)
 
     period_confirmed = data_summary[data_summary['Status'] == 'Confirmed' ][data_summary['Country/Region'] == selector_pais]
-    period_deaths= data_summary[data_summary['Status'] == 'Deaths' ][data_summary['Country/Region'] == selector_pais]
+    period_deaths= data_summary[data_summary['Status'] == 'Death' ][data_summary['Country/Region'] == selector_pais]
     period_recovered = data_summary[data_summary['Status'] == 'Recovered' ][data_summary['Country/Region'] == selector_pais]
 
     bar_confirmed  = px.bar(period_confirmed, x='Year-month',y='Cases', color_discrete_sequence=["red"], labels={'Year-month':'Año-mes','Cases':'Casos'}, title='Confirmados por mes')
@@ -350,17 +374,18 @@ def set_otras_estadisticas():
     data2 = pd.pivot_table(data,index=['Country/Region','Lat','Long','Date','Year-month'],columns='Status', values='Cases', aggfunc=np.sum, observed=True)
     data2.reset_index(inplace=True)
     data2['Confirmed'] = data2['Confirmed'].fillna(0)
-    data2['Deaths'] = data2['Deaths'].fillna(0)
+    data2['Death'] = data2['Death'].fillna(0)
     data2['Recovered'] = data2['Recovered'].fillna(0)
     data2 = data2.groupby(by=['Country/Region','Year-month']).sum()
-    data2['Mortality Rate'] = data2['Deaths']/data2['Confirmed']*100
+    data2['Mortality Rate'] = data2['Death']/data2['Confirmed']*100
     data2.reset_index(inplace=True)
-    data2 = data2[['Country/Region','Year-month','Mortality Rate','Confirmed','Deaths','Recovered']]
+    data2 = data2[['Country/Region','Year-month','Mortality Rate','Confirmed','Death','Recovered']]
     data2 = data2.dropna(subset=['Mortality Rate'])
     data2 = data2[data2['Country/Region']==selector_pais]
     total_confirmed = data2['Confirmed'].sum()
-    total_deaths = data2['Deaths'].sum()
+    total_deaths = data2['Death'].sum()
     total_recovered = data2['Recovered'].sum()
+    data2['Year-month'] = data2['Year-month'].dt.to_timestamp('s').dt.strftime('%Y-%m')
 
     fig = px.line(data2.round(2), x='Year-month',y='Mortality Rate', labels={'Year-month':'Año-mes','Mortality Rate':'Tasa de mortalidad'}, text='Mortality Rate', markers = True)
     fig.update_traces(
