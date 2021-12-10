@@ -32,10 +32,11 @@ frames = [data_confirmed, data_death, data_recovered]
 
 data = pd.concat(frames)
 
-data = data.drop(['Cases'], axis=1)
-data = data.rename(columns={"Province": "Province/State", "Country": "Country/Region", "NewCases": "Cases", "Type": "Status"})
+print(data)
+
+data = data.drop(['CasesOrig'], axis=1)
 data['Date'] = pd.to_datetime(data['Date']).dt.date
-data['Year-month'] = pd.to_datetime(data['Date']).dt.to_period('M')
+data['Year-month'] = pd.to_datetime(data['Year-month']).dt.to_period('M')
 
 
 # Clase para vincula un mapa de colores a una capa determinada
