@@ -78,6 +78,27 @@ def read_root():
 
     return {"data": data}
 
+
+@app.get("/consolidated")
+def read_root():
+    test = ""
+   # try:
+    cnx = mysql.connector.connect(**config)
+    cursor = cnx.cursor(buffered=True, dictionary=True)
+
+    query = ("select * from cases_CV19")
+    cursor.execute(query, params=None)
+    data = []
+    for row in cursor:
+        data.append(row)
+    #except mysql.connector.Error as err:
+        #print("Something went wrong: {}".format(err))
+
+    cursor.close()
+    cnx.close()
+
+    return {"data": data}
+
 @app.get("/operaciones/suma")
 async def read_items(q: Optional[List[int]] = Query(None)):
     x = 0
