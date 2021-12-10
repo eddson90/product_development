@@ -50,22 +50,31 @@ def filetodb(table_name, file_name1,TypeofFile):
     datafinal = data.melt(id_vars=["Province/State", "Country/Region", "Lat", "Long"],
                           var_name="Date",
                           value_name="Confirmed")
-    datafinal.columns = ["Province", "Country", "Lat", "Long", "Date", "Cases"]#,"NewCases","Type"]
+    datafinal.columns = ["Province/State", "Country/Region", "Lat", "Long", "Date", "CasesOrig"]#,"NewCases","Type"]
     #Transformation
-    dffinal2 = pd.DataFrame(columns=["Province", "Country", "Lat", "Long", "Date", "Cases", "NewCases", "Type"])
-    uniqueValues = datafinal.Country.unique()
+    dffinal2 = pd.DataFrame(columns=["Province/State", "Country/Region", "Lat", "Long", "Date", "CasesOrig", "Cases", "Status","Year-month"])
+    uniqueValues = datafinal["Country/Region"].unique()
     for row in uniqueValues:
-        Country = datafinal.loc[datafinal['Country'] == row]
-        Country['NewCases'] = Country['Cases'] - Country.shift(periods=1, fill_value=0)['Cases']
-        Country['Type'] = TypeofFile
-        dffinal2 = dffinal2.append(Country)
+        Country = datafinal.loc[datafinal['Country/Region'] == row]
+        Country["Province/State"].fillna("TODO", inplace=True)
+        uniqueValues2 = Country["Province/State"].unique()
+        for row2 in uniqueValues2:
+            region = Country.loc[Country["Province/State"]==row2]
+            region['Cases'] = region['CasesOrig'] - region.shift(periods=1, fill_value=0)['CasesOrig']
+            region['Status'] = TypeofFile
+            region['Year-month'] = pd.to_datetime(Country['Date']).dt.strftime('%Y-%m')
+            dffinal2 = dffinal2.append(region)
+        #Country['Cases'] = Country['CasesOrig'] - Country.shift(periods=1, fill_value=0)['CasesOrig']
+        #Country['Status'] = TypeofFile
+        #Country['Year-month'] = pd.to_datetime(Country['Date']).dt.strftime('%Y-%m')
+        #dffinal2 = dffinal2.append(Country)
 
     print(dffinal2)
 
     with mysql_connection.begin() as connection:
         #connection.execute(f'DELETE FROM {table_name} WHERE 1=1')
         if TypeofFile == 'Confirmed':
-            dffinal3 = pd.DataFrame(columns=["Province", "Country", "Lat", "Long", "Date", "Cases", "NewCases", "Type"])
+            dffinal3 = pd.DataFrame(columns=["Province/State", "Country/Region", "Lat", "Long", "Date", "CasesOrig", "Cases", "Status","Year-month"])
             dffinal3.to_sql('cases_cv19', con=connection, schema='test', if_exists='replace', index=False)
         dffinal2.to_sql(table_name, con=connection, schema='test', if_exists='replace', index=False)
         #connection.execute("insert into cases_cv19 select * from " + table_name)
