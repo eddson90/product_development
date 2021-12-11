@@ -80,6 +80,7 @@ def filetodb(table_name, file_name1,TypeofFile):
         #connection.execute("insert into cases_cv19 select * from " + table_name)
         connection.execute(f'USE test; insert into cases_cv19 select * from {table_name}')
         connection.execute(f'USE test; update cases_cv19 set cases = 0 where cases < 0')
+        connection.execute(f'USE test; update {table_name} set cases = 0 where cases < 0')
 
 #Procedimiento: etl
 # Funcion: cargar archivo time_series_covid19_confirmed_global a la tabla cases_confirmedCV19 por medio de la funcion filetodb
