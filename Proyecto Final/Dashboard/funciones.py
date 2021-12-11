@@ -16,7 +16,7 @@ import plotly.graph_objects as go
 #from consolidate_data import *
 #data = pd.read_csv('data_sources/data.csv')
 
-base_url = 'http://localhost:80/'
+base_url = 'http://172.16.1.33:80/'
 
 def get_data(url, endpoint):
     r = requests.get(url+endpoint)
