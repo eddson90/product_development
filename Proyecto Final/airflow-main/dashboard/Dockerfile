@@ -2,6 +2,8 @@ FROM python:3.8.2
 
 WORKDIR .
 
+RUN apt-get install libgdal-dev
+
 RUN apt-get update && apt-get install -y binutils libproj-dev gdal-bin
 
 COPY ./requirements.txt ./requirements.txt
