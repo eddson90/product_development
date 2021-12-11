@@ -1,12 +1,12 @@
-FROM python:3.8.2
+FROM osgeo/gdal
+
+RUN apt-get update
+
+RUN apt install -y python3-pip
 
 WORKDIR .
 
-RUN apt-get install libgdal-dev
-
-RUN apt-get update && apt-get install -y binutils libproj-dev gdal-bin
-
-COPY ./requirements.txt ./requirements.txt
+COPY requirements.txt ./
 
 RUN pip install -r requirements.txt
 

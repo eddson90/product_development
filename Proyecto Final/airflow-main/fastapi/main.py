@@ -86,7 +86,7 @@ def read_root():
     cnx = mysql.connector.connect(**config)
     cursor = cnx.cursor(buffered=True, dictionary=True)
 
-    query = ("select * from cases_CV19")
+    query = ("select * from cases_cv19")
     cursor.execute(query, params=None)
     data = []
     for row in cursor:
