@@ -336,13 +336,13 @@ def set_estadisticas():
 
         
     #columnas
-    col1, col2 = st.columns([2,1])
+    #col1, col2 = st.columns([2,1])
 
-    with col1:
-        st.plotly_chart(fig, use_container_width = True)
+    #with col1:
+    st.plotly_chart(fig, use_container_width = True)
 
-    with col2:
-        st.plotly_chart(barras,use_container_width = True)
+    #with col2:
+    #st.plotly_chart(barras,use_container_width = True)
 
 
 
@@ -418,7 +418,7 @@ def set_acerca_de():
         body="""
         El presente dashboard, front-end y back-end fueron desarrollados como parte del proyecto final end-to-end del curso de Product Development de Universidad Galileo (2021) en la Maestría de Ciencia de Datos. El código está desplegado mediante un contenedor de Docker,  la ingesta de datos se realizó en Airflow, la interfaz de comunicación se realizó a través de FastAPI y el tablero con streamlit. 
         
-        El código está disponible en: https://github.com/eddson90/product_development/tree/master/Proyecto%20Final
+        La documentación está disponible en: shorturl.at/xyAWZ
         
         Todos los derechos reservados.
         
