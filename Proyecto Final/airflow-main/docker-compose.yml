@@ -61,3 +61,10 @@ services:
         depends_on:
             - db
 
+    streamlit:
+        image: streamlit
+        ports:
+            - 8501:8501
+        depends_on:
+            - fastapiapp
+

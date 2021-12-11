@@ -16,7 +16,7 @@ import plotly.graph_objects as go
 #from consolidate_data import *
 #data = pd.read_csv('data_sources/data.csv')
 
-base_url = 'http://172.16.1.33:80/'
+base_url = 'http://fastapiapp:80/'
 
 def get_data(url, endpoint):
     r = requests.get(url+endpoint)
@@ -67,7 +67,7 @@ class BindColormap(MacroElement):
 # Funcion para generar el mapa empleando folium 
 def folium_plot(start_date, end_date, status):
     # Definiendo el path del archivo JSON con la geometria de los paises
-    country_shapes = 'map_sources\world-countries.json'
+    country_shapes = 'world-countries.json'
     data_filtered = data.copy()
     data_filtered['Date'] = pd.to_datetime(data_filtered['Date'], errors='coerce')
     data_filtered = data_filtered[(data_filtered['Date']>=start_date) & (data_filtered['Date']<=end_date)]
@@ -236,7 +236,7 @@ def folium_plot(start_date, end_date, status):
 def set_inicio():
     st.title("Introducción")
 
-    st.image('images\covid-19-updates-banner-a.png')
+    st.image('covid-19-updates-banner-a.png')
 
     st.markdown("""
 

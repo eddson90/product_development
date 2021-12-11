@@ -33,7 +33,7 @@ st.sidebar.markdown("""
     ###### Product Development\n
     ###### Universidad Galileo (2021)
 """)
-st.sidebar.image('images/galileo.png', width=100)
+st.sidebar.image('galileo.png', width=100)
 
 if menu == 'Inicio':
     set_inicio()
